@@ -70,7 +70,17 @@ function useUser() {
   if (context === undefined) {
     throw new Error(`useUser must be used within a UserProvider`)
   }
-  return context
+  const updateUser = async ({dispatch, user, updates}) => {
+    try {
+      const updatedUser = await userClient.updateUser(user, updates)
+      dispatch({type: 'finish update', updatedUser})
+      return updatedUser
+    } catch (error) {
+      dispatch({type: 'fail update', error})
+      return Promise.reject(error)
+    }
+  }
+  return [...context, updateUser]
 }
 
 // 🐨 add a function here called `updateUser`
@@ -82,7 +92,7 @@ function useUser() {
 // src/screens/user-profile.js
 // import {UserProvider, useUser} from './context/user-context'
 function UserSettings() {
-  const [{user, status, error}, userDispatch] = useUser()
+  const [{user, status, error}, userDispatch, updateUser] = useUser()
 
   const isPending = status === 'pending'
   const isRejected = status === 'rejected'
@@ -97,12 +107,7 @@ function UserSettings() {
 
   function handleSubmit(event) {
     event.preventDefault()
-    // 🐨 move the following logic to the `updateUser` function you create above
-    userDispatch({type: 'start update', updates: formState})
-    userClient.updateUser(user, formState).then(
-      updatedUser => userDispatch({type: 'finish update', updatedUser}),
-      error => userDispatch({type: 'fail update', error}),
-    )
+    updateUser({dispatch: userDispatch, user, updates: formState})
   }
 
   return (
